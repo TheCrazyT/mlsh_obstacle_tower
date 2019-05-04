@@ -17,6 +17,8 @@ def start(callback, args, workerseed, rank, comm):
     np.random.seed(workerseed)
     ob_space = env.observation_space
     ac_space = env.action_space
+    print("ob_space: %s" % ob_space)
+    print("ac_space: %s" % ac_space)
 
     num_subs = args.num_subs
     macro_duration = args.macro_duration
@@ -27,7 +29,14 @@ def start(callback, args, workerseed, rank, comm):
     num_batches = 15
 
     # observation in.
-    ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=[None, ob_space.shape[0]])
+    if(len(ob_space.shape)==1):
+        ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=[None, ob_space.shape[0]])
+    elif(len(ob_space.shape)==2):
+        ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=[None, ob_space.shape[0] * ob_space.shape[1]])
+    elif(len(ob_space.shape)==3):
+        ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=[None, ob_space.shape[0] * ob_space.shape[1] * ob_space.shape[2]])
+    else:
+        raise Exception("unsupported observer space shape (%d)" % len(ob_space.shape))
     # ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=[None, 104])
 
     # features = Features(name="features", ob=ob)
@@ -40,6 +49,7 @@ def start(callback, args, workerseed, rank, comm):
     learner = Learner(env, policy, old_policy, sub_policies, old_sub_policies, comm, clip_param=0.2, entcoeff=0, optim_epochs=10, optim_stepsize=3e-5, optim_batchsize=64)
     rollout = rollouts.traj_segment_generator(policy, sub_policies, env, macro_duration, num_rollouts, stochastic=True, args=args)
 
+    hasRandomizeCorrect = hasattr(env,"env") and hasattr(env.env,"randomizeCorrect")
 
     for x in range(10000):
         callback(x)
@@ -51,11 +61,11 @@ def start(callback, args, workerseed, rank, comm):
         policy.reset()
         learner.syncMasterPolicies()
 
-        env.env.randomizeCorrect()
-        shared_goal = comm.bcast(env.env.realgoal, root=0)
-        env.env.realgoal = shared_goal
-
-        print("It is iteration %d so i'm changing the goal to %s" % (x, env.env.realgoal))
+        if hasRandomizeCorrect:
+            env.env.randomizeCorrect()
+            shared_goal = comm.bcast(env.env.realgoal, root=0)
+            env.env.realgoal = shared_goal
+            print("It is iteration %d so i'm changing the goal to %s" % (x, env.env.realgoal))
         mini_ep = 0 if x > 0 else -1 * (rank % 10)*int(warmup_time+train_time / 10)
         # mini_ep = 0
 

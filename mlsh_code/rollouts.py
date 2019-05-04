@@ -8,7 +8,7 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
     ac = env.action_space.sample()
     new = True
     rew = 0.0
-    ob = env.reset()
+    ob = env.reset().flatten()
     cur_subpolicy = 0
     macro_vpred = 0
     macro_horizon = math.ceil(horizon/macrolen)
@@ -27,7 +27,7 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
     macro_acs = np.zeros(macro_horizon, 'int32')
     macro_vpreds = np.zeros(macro_horizon, 'float32')
 
-    ob = env.reset()
+    ob = env.reset().flatten()
 
     x = 0
     z = 0
@@ -69,24 +69,25 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
             macro_vpreds[int(i/macrolen)] = macro_vpred
 
         ob, rew, new, info = env.step(ac)
+        ob = ob.flatten()
         rews[i] = rew
 
         if replay:
             if len(ep_rets) == 0:
                 # if x % 5 == 0:
                 env.render()
+                time.sleep(0.1)
                     # print(info)
             pass
 
         cur_ep_ret += rew
         cur_ep_len += 1
-        if new and ((t+1) % macrolen == 0):
-        # if new:
+        if new or ((t+1) % macrolen == 0):
             ep_rets.append(cur_ep_ret)
             ep_lens.append(cur_ep_len)
             cur_ep_ret = 0
             cur_ep_len = 0
-            ob = env.reset()
+            ob = env.reset().flatten()
         t += 1
 
 def add_advantage_macro(seg, macrolen, gamma, lam):

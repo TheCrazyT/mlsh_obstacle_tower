@@ -13,6 +13,7 @@ parser.add_argument('--replay', type=str)
 parser.add_argument('-s', action='store_true')
 parser.add_argument('--continue_iter', type=str)
 args = parser.parse_args()
+sess = None
 
 # python main.py --task MovementBandits-v0 --num_subs 2 --macro_duration 10 --num_rollouts 1000 --warmup_time 60 --train_time 1 --replay True test
 
@@ -44,16 +45,22 @@ RELPATH = osp.join(args.savename)
 LOGDIR = osp.join('/root/results' if sys.platform.startswith('linux') else '/tmp', RELPATH)
 
 def callback(it):
+    global sess
+    print("it: %s\n\n" % it)
     if MPI.COMM_WORLD.Get_rank()==0:
         if it % 5 == 0 and it > 3 and not replay:
             fname = osp.join("savedir/", 'checkpoints', '%.5i'%it)
+            print("save_state %s" % fname)
             U.save_state(fname)
+            tf.train.write_graph(sess.graph_def, osp.join("savedir/", 'checkpoints'), 'train%.5i.pb' % it, as_text=False)
+
     if it == 0 and args.continue_iter is not None:
         fname = osp.join("savedir/"+args.savename+"/checkpoints/", str(args.continue_iter))
         U.load_state(fname)
         pass
 
 def train():
+    global sess
     num_timesteps=1e9
     seed = 1401
     rank = MPI.COMM_WORLD.Get_rank()

@@ -1,0 +1,1 @@
+python main.py --task ObstacleTower-v0 --num_subs 2 --macro_duration 1000 --num_rollouts 2000 --warmup_time 20 --train_time 30 --replay False ObstacleTower

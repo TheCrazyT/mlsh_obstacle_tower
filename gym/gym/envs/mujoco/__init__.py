@@ -14,14 +14,3 @@ from gym.envs.mujoco.humanoidstandup import HumanoidStandupEnv
 from gym.envs.mujoco.pusher import PusherEnv
 from gym.envs.mujoco.thrower import ThrowerEnv
 from gym.envs.mujoco.striker import StrikerEnv
-
-from gym.envs.mujoco.swimmer_bandits import SwimmerBanditsEnv
-from gym.envs.mujoco.ant_bandits import AntBanditsEnv
-from gym.envs.mujoco.obstacles import Obstacles
-
-from gym.envs.mujoco.ant_movement import AntMovementEnv
-from gym.envs.mujoco.ant_obstacles import AntObstaclesEnv
-from gym.envs.mujoco.ant_obstaclesbig import AntObstaclesBigEnv
-from gym.envs.mujoco.ant_obstaclesgen import AntObstaclesGenEnv
-from gym.envs.mujoco.humanoid_course import HumanoidCourseEnv
-from gym.envs.mujoco.humanoid_seq import HumanoidSeqEnv

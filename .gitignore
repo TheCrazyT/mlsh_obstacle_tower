@@ -1,0 +1,5 @@
+_gym
+backup
+savedir
+*.log
+__pycache__

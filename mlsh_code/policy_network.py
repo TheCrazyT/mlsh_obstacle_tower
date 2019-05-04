@@ -18,7 +18,12 @@ class Policy(object):
         with tf.variable_scope(name):
             self.scope = tf.get_variable_scope().name
             with tf.variable_scope("obfilter"):
-                self.ob_rms = RunningMeanStd(shape=(ob.get_shape()[1],))
+                if(len(ob.shape)==2):
+                    self.ob_rms = RunningMeanStd(shape=(ob.get_shape()[1],))
+                elif(len(ob.shape)==3):
+                    self.ob_rms = RunningMeanStd(shape=(ob.get_shape()[1] * ob.get_shape()[2]))
+                elif(len(ob.shape)==4):
+                    self.ob_rms = RunningMeanStd(shape=(ob.get_shape()[1] * ob.get_shape()[2] * ob.get_shape()[3]))
             obz = tf.clip_by_value((ob - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
             # obz = ob
 
