@@ -48,7 +48,7 @@ def callback(it):
     global sess
     print("it: %s\n\n" % it)
     if MPI.COMM_WORLD.Get_rank()==0:
-        if it % 5 == 0 and it > 3 and not replay:
+        if it % 1 == 0 and it > 2 and not replay:
             fname = osp.join("savedir/", 'checkpoints', '%.5i'%it)
             print("save_state %s" % fname)
             U.save_state(fname)
