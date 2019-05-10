@@ -82,7 +82,7 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
 
         cur_ep_ret += rew
         cur_ep_len += 1
-        if new or ((t+1) % macrolen == 0):
+        if new and ((t+1) % macrolen == 0):
             ep_rets.append(cur_ep_ret)
             ep_lens.append(cur_ep_len)
             cur_ep_ret = 0
