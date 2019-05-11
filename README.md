@@ -1,3 +1,5 @@
+Modified for use with: https://github.com/Unity-Technologies/obstacle-tower-env
+
 **Status:** Archive (code is provided as-is, no updates expected)
 
 # Meta-Learning Shared Hierarchies
