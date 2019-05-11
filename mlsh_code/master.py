@@ -51,7 +51,7 @@ def start(callback, args, workerseed, rank, comm):
 
     hasRandomizeCorrect = hasattr(env,"env") and hasattr(env.env,"randomizeCorrect")
 
-    for x in range(10000):
+    for x in range(100000):
         callback(x)
         if x == 0:
             learner.syncSubpolicies()

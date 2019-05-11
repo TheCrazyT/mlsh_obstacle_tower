@@ -1,10 +1,21 @@
 from gym.envs.registration import registry, register, make, spec
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--replay', type=str, default="False")
+args,_ = parser.parse_known_args()
 register(
     id='ObstacleTower-v0',
     entry_point='obstacle_tower_env:ObstacleTowerEnv',
-    max_episode_steps=200,
-    #ToDo ... somehow change realtime_mode depending on "render" param
-    kwargs={'environment_filename':r'd:\Backups_and_projects\sources\obstacle-tower-env\ObstacleTower\ObstacleTower.exe', 'retro':True, 'realtime_mode':False},
+    max_episode_steps=3000,
+    kwargs={'environment_filename':r'd:\Backups_and_projects\sources\obstacle-tower-env\ObstacleTower\ObstacleTower.exe', 'retro':True, 'realtime_mode':str2bool(args.replay)},
 )
 # Algorithmic
 # ----------------------------------------
