@@ -14,7 +14,7 @@ args,_ = parser.parse_known_args()
 register(
     id='ObstacleTower-v0',
     entry_point='obstacle_tower_env:ObstacleTowerEnv',
-    max_episode_steps=600, #3000/5
+    max_episode_steps=10000000,#600, #3000/5
     kwargs={'environment_filename':r'd:\Backups_and_projects\sources\obstacle-tower-env\ObstacleTower\ObstacleTower.exe', 'retro':True, 'realtime_mode':str2bool(args.replay)},
 )
 # Algorithmic

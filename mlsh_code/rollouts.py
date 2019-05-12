@@ -31,6 +31,7 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
 
     x = 0
     z = 0
+    ticksSinceLastReward = 0
 
     # total = [0,0]
     # tt = 0
@@ -50,6 +51,7 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
             # ac = env.action_space.sample()
 
         if t > 0 and t % horizon == 0:
+            print("\t\tyield, t %% horizon == 0 (%d %% %d)" % (t,horizon))
             # tt += 1
             # print(total)
             # total = [0,0]
@@ -73,7 +75,7 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
         rews[i] = rew
 
         if (t % 100) == 0:
-            print("%d" % t)
+            print("\t\t%d" % t)
         if replay:
             if len(ep_rets) == 0:
                 # if x % 5 == 0:
@@ -81,7 +83,9 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
                 time.sleep(0.1)
                     # print(info)
             pass
-
+        if rew > 0:
+            rew -= 0.0001*ticksSinceLastReward
+            ticksSinceLastReward = 0
         cur_ep_ret += rew
         cur_ep_len += 1
         #if new and ((t+1) % macrolen == 0):
@@ -90,9 +94,13 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
             ep_lens.append(cur_ep_len)
             cur_ep_ret = 0
             cur_ep_len = 0
-            print("env.reset, new:%s, macorlen_cond:%s, t:%d" % (new,((t+1) % macrolen == 0),t))
+            print("\t\tenv.reset, new:%s, macorlen_cond:%s, t:%d" % (new,((t+1) % macrolen == 0),t))
             ob = env.reset().flatten()
+            print("\t\tt: %d adjusted to %d" % (t,t+(horizon - (t % horizon))))
+            t += (horizon - (t % horizon))
+            ticksSinceLastReward = 0
         t += 1
+        ticksSinceLastReward += 1
 
 def add_advantage_macro(seg, macrolen, gamma, lam):
     new = np.append(seg["new"][0::macrolen], 0) # last element is only used for last vtarg, but we already zeroed it if last new = 1

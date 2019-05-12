@@ -48,11 +48,11 @@ def callback(it):
     global sess
     print("it: %s\n\n" % it)
     if MPI.COMM_WORLD.Get_rank()==0:
-        if it % 1 == 0 and it > 2 and not replay:
+        if (it > 0) and (not replay):
             fname = osp.join("savedir/", 'checkpoints', '%.5i'%it)
             print("save_state %s" % fname)
             U.save_state(fname)
-            tf.train.write_graph(sess.graph_def, osp.join("savedir/", 'checkpoints'), 'train%.5i.pb' % it, as_text=False)
+            #tf.train.write_graph(sess.graph_def, osp.join("savedir/", 'checkpoints'), 'train%.5i.pb' % it, as_text=False)
 
     if it == 0 and args.continue_iter is not None:
         fname = osp.join("savedir/"+args.savename+"/checkpoints/", str(args.continue_iter))

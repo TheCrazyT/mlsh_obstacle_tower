@@ -50,7 +50,6 @@ def start(callback, args, workerseed, rank, comm):
     rollout = rollouts.traj_segment_generator(policy, sub_policies, env, macro_duration, num_rollouts, stochastic=True, args=args)
 
     hasRandomizeCorrect = hasattr(env,"env") and hasattr(env.env,"randomizeCorrect")
-
     for x in range(100000):
         callback(x)
         if x == 0:
