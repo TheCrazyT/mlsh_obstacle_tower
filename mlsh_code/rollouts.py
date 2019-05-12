@@ -72,6 +72,8 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
         ob = ob.flatten()
         rews[i] = rew
 
+        if (t % 100) == 0:
+            print("%d" % t)
         if replay:
             if len(ep_rets) == 0:
                 # if x % 5 == 0:
@@ -82,11 +84,13 @@ def traj_segment_generator(pi, sub_policies, env, macrolen, horizon, stochastic,
 
         cur_ep_ret += rew
         cur_ep_len += 1
-        if new and ((t+1) % macrolen == 0):
+        #if new and ((t+1) % macrolen == 0):
+        if new:
             ep_rets.append(cur_ep_ret)
             ep_lens.append(cur_ep_len)
             cur_ep_ret = 0
             cur_ep_len = 0
+            print("env.reset, new:%s, macorlen_cond:%s, t:%d" % (new,((t+1) % macrolen == 0),t))
             ob = env.reset().flatten()
         t += 1
 
