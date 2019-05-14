@@ -10,8 +10,9 @@ from collections import deque
 from dataset import Dataset
 
 class Learner:
-    def __init__(self, env, policy, old_policy, sub_policies, old_sub_policies, comm, clip_param=0.2, entcoeff=0, optim_epochs=10, optim_stepsize=3e-4, optim_batchsize=64):
+    def __init__(self, env, policy, old_policy, sub_policies, old_sub_policies, guess_steps_policy, comm, clip_param=0.2, entcoeff=0, optim_epochs=10, optim_stepsize=3e-4, optim_batchsize=64):
         self.policy = policy
+        self.guess_steps_policy = guess_steps_policy
         self.clip_param = clip_param
         self.entcoeff = entcoeff
         self.optim_epochs = optim_epochs
@@ -28,10 +29,15 @@ class Learner:
         ac = policy.pdtype.sample_placeholder([None])
         atarg = tf.placeholder(dtype=tf.float32, shape=[None]) # Target advantage function (if applicable)
         ret = tf.placeholder(dtype=tf.float32, shape=[None]) # Empirical return
+        steps = tf.placeholder(dtype=tf.float32, shape=[None])
+        
         total_loss = self.policy_loss(policy, old_policy, ob, ac, atarg, ret, clip_param)
+        self.gs_var_list = guess_steps_policy.get_trainable_variables()
+        self.guess_steps_loss = U.function([ob, steps], U.flatgrad(self.guess_steps_policy_loss(guess_steps_policy, steps),self.gs_var_list))
         self.master_policy_var_list = policy.get_trainable_variables()
         self.master_loss = U.function([ob, ac, atarg, ret], U.flatgrad(total_loss, self.master_policy_var_list))
         self.master_adam = MpiAdam(self.master_policy_var_list, comm=comm)
+        self.gs_adam = MpiAdam(self.gs_var_list, comm=comm)
 
         self.assign_old_eq_new = U.function([],[], updates=[tf.assign(oldv, newv)
             for (oldv, newv) in zipsame(old_policy.get_variables(), policy.get_variables())])
@@ -54,6 +60,7 @@ class Learner:
 
         U.initialize()
 
+        self.gs_adam.sync()
         self.master_adam.sync()
         for i in range(self.num_subpolicies):
             self.adams[i].sync()
@@ -64,7 +71,9 @@ class Learner:
             for v in var_list
         ])
 
-
+    def guess_steps_policy_loss(self, pi, steps):
+        return tf.square(pi.vpred - steps)
+        
     def policy_loss(self, pi, oldpi, ob, ac, atarg, ret, clip_param):
         ratio = tf.exp(pi.pd.logp(ac) - tf.clip_by_value(oldpi.pd.logp(ac), -20, 20)) # advantage * pnew / pold
         surr1 = ratio * atarg
@@ -77,6 +86,9 @@ class Learner:
         total_loss = pol_surr + vf_loss
         return total_loss
 
+    def syncGuessStepsPolicies(self):
+        self.gs_adam.sync()
+    
     def syncMasterPolicies(self):
         self.master_adam.sync()
 
@@ -84,6 +96,17 @@ class Learner:
         for i in range(self.num_subpolicies):
             self.adams[i].sync()
 
+    def updateGuessStepsPolicyLoss(self, seg):
+        ob, steps = seg["macro_ob"], seg["macro_steps"]
+        d = Dataset(dict(ob=ob, steps=steps), shuffle=True)
+        optim_batchsize = min(self.optim_batchsize,ob.shape[0])
+        self.guess_steps_policy.ob_rms.update(ob)
+        for _ in range(self.optim_epochs):
+            for batch in d.iterate_once(optim_batchsize):
+                g = self.guess_steps_loss(batch["ob"], batch["steps"])
+                self.gs_adam.update(g, 0.01, 1)
+        
+            
     def updateMasterPolicy(self, seg):
         ob, ac, atarg, tdlamret = seg["macro_ob"], seg["macro_ac"], seg["macro_adv"], seg["macro_tdlamret"]
         # ob = np.ones_like(ob)

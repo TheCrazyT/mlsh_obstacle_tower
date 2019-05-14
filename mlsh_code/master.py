@@ -5,6 +5,7 @@ import rollouts
 from policy_network import Policy
 from subpolicy_network import SubPolicy
 from observation_network import Features
+from guess_steps import GuessStepsPolicy
 from learner import Learner
 import rl_algs.common.tf_util as U
 import numpy as np
@@ -40,14 +41,16 @@ def start(callback, args, workerseed, rank, comm):
     # ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=[None, 104])
 
     # features = Features(name="features", ob=ob)
+    
+    gs_policy = GuessStepsPolicy(name="guess_steps", ob=ob, hid_size=32, num_hid_layers=5)
     policy = Policy(name="policy", ob=ob, ac_space=ac_space, hid_size=32, num_hid_layers=2, num_subpolicies=num_subs)
     old_policy = Policy(name="old_policy", ob=ob, ac_space=ac_space, hid_size=32, num_hid_layers=2, num_subpolicies=num_subs)
 
     sub_policies = [SubPolicy(name="sub_policy_%i" % x, ob=ob, ac_space=ac_space, hid_size=32, num_hid_layers=2) for x in range(num_subs)]
     old_sub_policies = [SubPolicy(name="old_sub_policy_%i" % x, ob=ob, ac_space=ac_space, hid_size=32, num_hid_layers=2) for x in range(num_subs)]
 
-    learner = Learner(env, policy, old_policy, sub_policies, old_sub_policies, comm, clip_param=0.2, entcoeff=0, optim_epochs=10, optim_stepsize=3e-5, optim_batchsize=64)
-    rollout = rollouts.traj_segment_generator(policy, sub_policies, env, macro_duration, num_rollouts, stochastic=True, args=args)
+    learner = Learner(env, policy, old_policy, sub_policies, old_sub_policies, gs_policy, comm, clip_param=0.2, entcoeff=0, optim_epochs=10, optim_stepsize=3e-5, optim_batchsize=64)
+    rollout = rollouts.traj_segment_generator(policy, sub_policies, gs_policy, env, macro_duration, num_rollouts, stochastic=True, args=args)
 
     hasRandomizeCorrect = hasattr(env,"env") and hasattr(env.env,"randomizeCorrect")
     for x in range(100000):
@@ -58,6 +61,7 @@ def start(callback, args, workerseed, rank, comm):
         # Run the inner meta-episode.
 
         policy.reset()
+        learner.syncGuessStepsPolicies()
         learner.syncMasterPolicies()
 
         if hasRandomizeCorrect:
@@ -73,15 +77,29 @@ def start(callback, args, workerseed, rank, comm):
             mini_ep += 1
             # rollout
             rolls = rollout.__next__()
+            
+            
             allrolls = []
             allrolls.append(rolls)
             # train theta
             rollouts.add_advantage_macro(rolls, macro_duration, 0.99, 0.98)
+            
+            
             gmean, lmean = learner.updateMasterPolicy(rolls)
+            
+            if gmean>0:
+                learner.updateGuessStepsPolicyLoss(rolls)
+                #print("steps:")
+                #print(rolls["steps"])
+                #print("gs_vpreds:")
+                #print(rolls["gs_vpreds"])
+                print("gs mean:")
+                print(U.eval(tf.reduce_mean(tf.square(rolls["gs_vpreds"]-rolls["steps"]))))
+            
             # train phi
             test_seg = rollouts.prepare_allrolls(allrolls, macro_duration, 0.99, 0.98, num_subpolicies=num_subs)
             learner.updateSubPolicies(test_seg, num_batches, (mini_ep >= warmup_time))
-            # learner.updateSubPolicies(test_seg,
+
             # log
             print(("%d: global: %s, local: %s" % (mini_ep, gmean, lmean)))
             if args.s:
