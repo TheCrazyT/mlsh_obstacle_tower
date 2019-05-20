@@ -1,3 +1,14 @@
+Sadly its currently NOT working (don't waste your time).
+
+The current problem is the sparse reward.
+
+I'm currently thinking about adding something that guesses the distance to the next door/reward area.
+
+But thats not working correctly atm. .
+
+Might need the use of opencv (but for now trying it without).
+
+
 Modified for use with: https://github.com/Unity-Technologies/obstacle-tower-env
 
 **Status:** Archive (code is provided as-is, no updates expected)
